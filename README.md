@@ -4,6 +4,22 @@ A Python backend for generating personalized PDF certificates for many recipient
 
 **Project status:** Working implementation with API, background worker, PDF rendering, downloads, migrations, and automated tests. The default certificate uses a built-in vector design; add a Canva background PNG to customize it.
 
+## Visual certificate builder
+
+Open `http://127.0.0.1:8000/` with the API and worker running.
+
+1. Upload a blank certificate background (PNG/JPEG), such as a Canva export.
+2. Upload an Excel `.xlsx` or UTF-8 CSV file. The first row must contain unique column headings; the first Excel worksheet is used.
+3. Select the column containing recipient names. Click any column to add it as a certificate field.
+4. Drag fields into position. Select a field to change font, color, size, alignment, width, or precise coordinates. Arrow keys move a focused field; Shift increases the step.
+5. Choose a preview recipient, then press **Generate certificates**. Watch individual outcomes and download PDFs or the completed ZIP.
+
+Use **Try with sample files** to explore a complete example. Numbers with leading zeros should be stored as text in Excel. Formulas use cached values from the workbook; save the sheet in Excel first. Uploads are limited to 10 MB, images to 20 megapixels, expanded workbooks to 50 MB, sheets to 50 columns and the configured recipient limit. PDF backgrounds and legacy `.xls` files are not supported.
+
+Custom fields can contain any spreadsheet column, including names, course titles, numbers, and dates. Text uses the current printable ASCII limitation. Each job stores an immutable background/layout/data snapshot under `storage/designs/{job_id}/`; editing the UI or uploading another design does not alter queued jobs. The builder adds `/builder/images`, `/builder/sheets`, and `/builder/jobs` endpoints while preserving the original fixed-template API.
+
+The frontend is dependency-free HTML/CSS/JavaScript served by FastAPI. Its preview approximates PDF font positioning; the generated PDF is the final output. Large text shrinks to fit or fails individually if it still cannot fit. Uploads and snapshots remain on local disk until manually removed. This extends the original single-template assignment scope at the user's request.
+
 ## Requirements
 
 - Submit shared certificate information and a list of recipients in one request.
@@ -115,7 +131,7 @@ Text is measured before drawing. Long text shrinks to the configured minimum fon
 
 The default design uses standard PDF Helvetica fonts and accepts printable ASCII names and course titles. Unsupported characters are rejected. Custom fonts must have appropriate redistribution rights and require renderer changes. Scripts requiring complex text shaping need additional renderer support.
 
-Jobs record their template version. Assets belonging to a version remain immutable while jobs depend on them. Template editing, template uploads, and multiple designs are outside the initial scope.
+Jobs record their template version. Assets belonging to a version remain immutable while jobs depend on them. The original `/jobs` endpoint uses this fixed template. The visual builder additionally supports uploaded backgrounds and per-job field layouts.
 
 ## API design
 
@@ -445,7 +461,7 @@ Worker tests invoke one processing iteration directly rather than relying on pol
 
 The initial application runs on one machine with persistent local storage and one worker. Downloads are unauthenticated in the local demonstration; UUIDs identify resources and do not establish ownership. A shared deployment needs authentication and ownership checks before exposing participant data.
 
-Generated files remain available until manually removed; automatic retention is not part of the initial scope. Email delivery, certificate verification pages, cancellation, template upload/editing, and cloud storage are optional future extensions.
+Generated files remain available until manually removed; automatic retention is not part of the initial scope. Email delivery, certificate verification pages, cancellation, and cloud storage are optional future extensions.
 
 For larger deployments, consider PostgreSQL, coordinated workers or a dedicated task queue, object storage, request idempotency, retention policies, and authenticated access. These should follow completion of the required workflow.
 
@@ -469,4 +485,4 @@ Place an optional `background.png` in `app/templates/default/` and adjust `layou
 
 ## Verification
 
-The initial implementation passes 12 automated tests. A separate worker process was also exercised against a submitted batch, producing two PDFs and one validation failure, and a sample PDF was visually checked. The current dependency combination emits a Starlette TestClient deprecation warning; tests still pass. PyMuPDF was used locally for visual inspection and is not an application dependency.
+The initial implementation passes 14 automated tests. A separate worker process was also exercised against a submitted batch, producing two PDFs and one validation failure, and a sample PDF was visually checked. The current dependency combination emits a Starlette TestClient deprecation warning; tests still pass. PyMuPDF was used locally for visual inspection and is not an application dependency.

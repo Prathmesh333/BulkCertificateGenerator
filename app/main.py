@@ -14,6 +14,7 @@ from app.config import Settings
 from app.database import Item, Job, connect, identifier, now
 from app.renderer import Renderer
 from app.schemas import Recipient, Request
+from app.builder import install_builder
 
 
 def item_result(item):
@@ -40,6 +41,7 @@ def create_app(settings=None):
             engine.dispose()
 
     app = FastAPI(title="Bulk Certificate Generator", lifespan=lifespan)
+    install_builder(app, settings)
 
     def get_job(session, job_id):
         job = session.get(Job, job_id)

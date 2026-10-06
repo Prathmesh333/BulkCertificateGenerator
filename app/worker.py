@@ -1,4 +1,5 @@
 import logging
+import json
 import time
 
 from filelock import FileLock
@@ -43,6 +44,16 @@ def process_next(sessions, settings, renderer):
         job.status = "processing"
         job.started_at = job.started_at or now()
         job_id = job.id
+    custom = None
+    values_by_id = None
+    if job.template_version == "custom-1":
+        directory = settings.storage_dir / "designs" / job.id
+        # Load the immutable snapshot once per job, rather than once per recipient.
+        try:
+            custom = Renderer(directory)
+            values_by_id = json.loads((directory / "values.json").read_text(encoding="utf-8"))
+        except Exception:
+            log.exception("Could not load design snapshot for job=%s", job_id)
     while True:
         with sessions.begin() as session:
             job = session.get(Job, job_id)
@@ -61,7 +72,13 @@ def process_next(sessions, settings, renderer):
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
             stage = "rendering"
-            renderer.render(job, item, temporary)
+            if job.template_version == "custom-1":
+                if custom is None or values_by_id is None:
+                    raise ValueError("Certificate design snapshot is unavailable.")
+                values = values_by_id[item.certificate_id]
+                custom.render(job, item, temporary, values)
+            else:
+                renderer.render(job, item, temporary)
             stage = "storage"
             temporary.replace(target)
         except Exception as exc:

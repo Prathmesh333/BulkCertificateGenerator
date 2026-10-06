@@ -16,7 +16,7 @@ class Renderer:
         for field in self.layout["fields"].values():
             stringWidth("sample", field["font"], field["font_size_pt"])
 
-    def render(self, job, item, destination):
+    def render(self, job, item, destination, custom_values=None):
         if job.template_version != self.version:
             raise ValueError("Job template version is unavailable.")
         width = self.layout["page"]["width_mm"] * mm
@@ -40,6 +40,8 @@ class Renderer:
         values = {"recipient_name": item.recipient_name, "course_name": job.course_name,
                   "issue_date": "Issued on " + job.issue_date,
                   "certificate_id": "Certificate ID: " + item.certificate_id}
+        if custom_values is not None:
+            values = custom_values
         for key, field in self.layout["fields"].items():
             value = values[key]
             size = field["font_size_pt"]
@@ -49,6 +51,7 @@ class Renderer:
                     raise ValueError(f"{key} cannot fit in its reserved space.")
             canvas.setFillColor(HexColor(field.get("color", "#203040")))
             canvas.setFont(field["font"], size)
-            canvas.drawCentredString(field["x_mm"] * mm, height - field["y_mm"] * mm, value)
+            draw = {"center": canvas.drawCentredString, "left": canvas.drawString, "right": canvas.drawRightString}[field.get("align", "center")]
+            draw(field["x_mm"] * mm, height - field["y_mm"] * mm, value)
         canvas.showPage()
         canvas.save()
