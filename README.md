@@ -18,7 +18,7 @@ Use **Try with sample files** to explore a complete example. Numbers with leadin
 
 Custom fields can contain any spreadsheet column, including names, course titles, numbers, and dates. Text uses the current printable ASCII limitation. Each job stores an immutable background/layout/data snapshot under `storage/designs/{job_id}/`; editing the UI or uploading another design does not alter queued jobs. The builder adds `/builder/images`, `/builder/sheets`, and `/builder/jobs` endpoints while preserving the original fixed-template API.
 
-The frontend is dependency-free HTML/CSS/JavaScript served by FastAPI. Its preview approximates PDF font positioning; the generated PDF is the final output. Large text shrinks to fit or fails individually if it still cannot fit. Uploads and snapshots remain on local disk until manually removed. This extends the original single-template assignment scope at the user's request.
+The frontend uses HTML/CSS/JavaScript served by FastAPI, with a locally vendored Three.js scene. Its preview approximates PDF font positioning; the generated PDF is the final output. Large text shrinks to fit or fails individually if it still cannot fit. Uploads and snapshots remain on local disk until manually removed. This extends the original single-template assignment scope at the user's request.
 
 ## Requirements
 
@@ -486,3 +486,19 @@ Place an optional `background.png` in `app/templates/default/` and adjust `layou
 ## Verification
 
 The initial implementation passes 14 automated tests. A separate worker process was also exercised against a submitted batch, producing two PDFs and one validation failure, and a sample PDF was visually checked. The current dependency combination emits a Starlette TestClient deprecation warning; tests still pass. PyMuPDF was used locally for visual inspection and is not an application dependency.
+
+## Studio design and motion
+
+The studio uses coral, lilac, mint, and warm gold surfaces, geometric illustrations, and a pointer-responsive Three.js certificate sculpture. The editor includes layer selection, color presets, alignment guides, zoom, undo/redo, file-drop feedback, and a one-time batch-completion celebration.
+
+Decorative rendering pauses off-screen, while the tab is hidden, or through **Pause motion**. System reduced-motion preferences disable spatial animation and the continuous Three.js loop. A CSS illustration remains visible when WebGL is unavailable. The certificate editor and generation flow do not depend on WebGL.
+
+Three.js 0.180.0 and its MIT license are checked into `app/static/vendor/`, so no CDN or Node process is needed to run the app. To update/rebuild frontend dependencies or run interaction tests:
+
+```bash
+npm ci
+npm run vendor
+npm test
+```
+
+The frontend has four DOM interaction tests covering field placement, editing, undo/redo, zoom, keyboard movement, preview selection, and batch submission/results. These complement the 14 Python tests. JavaScript syntax checks and served assets were verified. Visual responsiveness, GPU rendering, and real touch behavior have not been verified in a browser because browser automation was blocked by the tool URL policy.

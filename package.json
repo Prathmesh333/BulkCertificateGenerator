@@ -1,0 +1,11 @@
+{
+  "name": "certificate-studio-ui",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "vendor": "node scripts/vendor-three.mjs",
+    "test": "node --test tests/ui.test.mjs"
+  },
+  "dependencies": {"three": "0.180.0"},
+  "devDependencies": {"jsdom": "26.1.0"}
+}

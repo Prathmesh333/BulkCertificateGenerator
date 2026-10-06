@@ -15,7 +15,7 @@ dev = ["pytest>=8,<10", "httpx>=0.27,<1", "pypdf>=5,<7"]
 include = ["app*"]
 
 [tool.setuptools.package-data]
-app = ["templates/default/*.json", "static/*"]
+app = ["templates/default/*.json", "static/*", "static/vendor/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
