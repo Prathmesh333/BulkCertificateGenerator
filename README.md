@@ -30,14 +30,7 @@ The repository includes files from a live end-to-end check:
 - [Recipient Excel sheet](examples/recipients.xlsx): one generic recipient named Demo Name.
 - [Generated sample PDF](examples/generated-certificate.pdf): the output for Demo Name.
 
-Start the API and worker, then upload the background and workbook through the studio. Select **Name** as the recipient name column and add the following fields. The sample uses a 297 × 210 mm page; enter these coordinates in the inspector for the illustrated result.
-
-| Column | X (mm) | Baseline Y (mm) | Width (mm) | Font | Size (pt) | Color |
-| --- | --- | --- | --- | --- | --- | --- |
-| Name | 148.5 | 95 | 235 | Times Bold | 34 | `#122b47` |
-| Course | 148.5 | 134 | 230 | Helvetica | 23 | `#122b47` |
-| Issue Date | 148.5 | 164 | 200 | Helvetica | 14 | `#425c64` |
-| Number | 148.5 | 180 | 200 | Helvetica | 12 | `#425c64` |
+Start the API and worker, upload the sample files, and select Name as the recipient column. Add Name, Course, Issue Date, and Number as text rectangles. Drag them into the blank spaces and resize their widths using the corner handles. Use Center, Left, Right, or Middle to align rectangles to the page. Pink snapping guides show matching page centers, edges, margins, and other fields. Numeric settings are optional under Advanced dimensions.
 
 Use center alignment for all four fields. Select a recipient in the preview dropdown, then generate. Expected result: **1 successful PDF, 0 failures, 100% processed, and `completed`**. The ZIP contains one PDF and a one-entry manifest. The sample uses generic values: Demo Name, Demo Course, and DEMO-001.
 

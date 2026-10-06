@@ -13,3 +13,5 @@ button:not(.placed):active,.primary:active{transform:scale(.97)!important;transi
 .status-cell{font-weight:650}.status-succeeded{color:#437b51}.status-failed{color:#b35e52}.status-processing{color:#8860b3}.status-pending{color:#9a8ca7}.inspector legend{background:#ecdefc;color:#65448c}fieldset[disabled]{opacity:.55}
 
 .hero-copy>.eyebrow{font-size:9px;line-height:1.5;margin-top:0}#canvas-empty .mini-certificate span{font:italic 15px Georgia;letter-spacing:0;color:#4d3c60}#canvas-empty .shape.star{font-size:49px;color:#f0aa89}
+
+.placed{min-height:24px}.placed.selected::after{display:none}.resize-handle{position:absolute;right:-5px;bottom:-5px;width:10px;height:10px;background:white;border:2px solid #926bd0;cursor:ew-resize;z-index:4}.placement-buttons{display:flex;flex-wrap:wrap;gap:5px;margin-top:15px}.placement-buttons button{font-size:11px;padding:6px}.snap-line{position:absolute;top:0;bottom:0;border-left:1px dashed #d9489a;pointer-events:none;z-index:4}.snap-line.horizontal{left:0;right:0;bottom:auto;border-left:0;border-top:1px dashed #d9489a}#snap-toggle{width:auto;display:inline}details summary{font-size:11px;cursor:pointer}

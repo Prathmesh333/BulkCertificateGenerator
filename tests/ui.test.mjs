@@ -77,3 +77,18 @@ test('drag locks to pointer and records a reversible move',async()=>{
  $('undo').click();assert.equal(Number($('field-x').value),before);
  dom.window.close();
 });
+
+test('rectangle resizing, page alignment and snapping',async()=>{
+ const {w,dom,$}=studio();await load(w);$('columns').firstChild.click();
+ const handle=w.document.querySelector('.resize-handle');
+ const before=Number($('field-width').value);
+ handle.dispatchEvent(new w.MouseEvent('pointerdown',{clientX:200,clientY:200,bubbles:true}));
+ handle.onpointermove({clientX:220});handle.onpointerup();
+ assert.ok(Number($('field-width').value)>before);
+ w.document.querySelector('[data-place="center"]').click();
+ assert.equal(Number($('field-x').value),148.5);
+ w.eval('const f=selected();f.x_mm=150;snapField(f,2);');
+ assert.equal(w.eval('selected().x_mm'),148.5);
+ assert.ok($('snap-guides').children.length);
+ dom.window.close();
+});
