@@ -1,8 +1,10 @@
 # Bulk Certificate Generator
 
-A Python backend for generating personalized PDF certificates for many recipients in one request. The API accepts a batch, validates each recipient, processes certificates in the background, and exposes progress and downloads.
+A Python application with a visual certificate studio and a bulk-generation API. Upload a certificate design and an Excel/CSV recipient list, place text fields on the canvas, and generate personalized PDFs for the entire batch. The API accepts a batch, validates each recipient, processes certificates in the background, and exposes progress and downloads.
 
-**Project status:** Working implementation with API, background worker, PDF rendering, downloads, migrations, and automated tests. The default certificate uses a built-in vector design; add a Canva background PNG to customize it.
+**Project status:** Working FastAPI backend and interactive frontend, with background processing, PDF/ZIP downloads, migrations, 14 Python tests, and 4 frontend interaction tests. The fixed-template API includes a built-in certificate design; the visual studio supports uploaded backgrounds and custom fields.
+
+[Setup](#setup-and-execution) · [Visual builder](#visual-certificate-builder) · [Sample files](#try-the-included-sample-files) · [API](#api-design) · [Tests](#tests)
 
 ## Visual certificate builder
 
@@ -14,11 +16,32 @@ Open `http://127.0.0.1:8000/` with the API and worker running.
 4. Drag fields into position. Select a field to change font, color, size, alignment, width, or precise coordinates. Arrow keys move a focused field; Shift increases the step.
 5. Choose a preview recipient, then press **Generate certificates**. Watch individual outcomes and download PDFs or the completed ZIP.
 
-Use **Try with sample files** to explore a complete example. Numbers with leading zeros should be stored as text in Excel. Formulas use cached values from the workbook; save the sheet in Excel first. Uploads are limited to 10 MB, images to 20 megapixels, expanded workbooks to 50 MB, sheets to 50 columns and the configured recipient limit. PDF backgrounds and legacy `.xls` files are not supported.
+Use **Try a ready-made example** to explore a complete example. Numbers with leading zeros should be stored as text in Excel. Formulas use cached values from the workbook; save the sheet in Excel first. Uploads are limited to 10 MB, images to 20 megapixels, expanded workbooks to 50 MB, sheets to 50 columns and the configured recipient limit. PDF backgrounds and legacy `.xls` files are not supported.
 
 Custom fields can contain any spreadsheet column, including names, course titles, numbers, and dates. Text uses the current printable ASCII limitation. Each job stores an immutable background/layout/data snapshot under `storage/designs/{job_id}/`; editing the UI or uploading another design does not alter queued jobs. The builder adds `/builder/images`, `/builder/sheets`, and `/builder/jobs` endpoints while preserving the original fixed-template API.
 
-The frontend uses HTML/CSS/JavaScript served by FastAPI, with a locally vendored Three.js scene. Its preview approximates PDF font positioning; the generated PDF is the final output. Large text shrinks to fit or fails individually if it still cannot fit. Uploads and snapshots remain on local disk until manually removed. This extends the original single-template assignment scope at the user's request.
+The frontend uses HTML/CSS/JavaScript served by FastAPI, with a locally vendored Three.js scene. Its preview approximates PDF font positioning; the generated PDF is the final output. Large text shrinks to fit or fails individually if it still cannot fit. Uploads and snapshots remain on local disk until manually removed. The fixed-template API satisfies the original single-template requirement; the visual builder adds optional custom design support.
+
+## Try the included sample files
+
+The repository includes files from a live end-to-end check:
+
+- [Certificate background](examples/certificate-background.png): generated dummy artwork with blank areas for personalized text.
+- [Recipient Excel sheet](examples/recipients.xlsx): five valid recipients and one intentionally blank name.
+- [Generated sample PDF](examples/generated-certificate.pdf): the output for Aisha Khan.
+
+Start the API and worker, then upload the background and workbook through the studio. Select **Name** as the recipient name column and add the following fields. The sample uses a 297 × 210 mm page; enter these coordinates in the inspector for the illustrated result.
+
+| Column | X (mm) | Baseline Y (mm) | Width (mm) | Font | Size (pt) | Color |
+| --- | --- | --- | --- | --- | --- | --- |
+| Name | 148.5 | 95 | 235 | Times Bold | 34 | `#122b47` |
+| Course | 148.5 | 134 | 230 | Helvetica | 23 | `#122b47` |
+| Issue Date | 148.5 | 164 | 200 | Helvetica | 14 | `#425c64` |
+| Number | 148.5 | 180 | 200 | Helvetica | 12 | `#425c64` |
+
+Use center alignment for all four fields. Select a recipient in the preview dropdown, then generate. Expected result: **5 successful PDFs, 1 validation failure, 100% processed, and `completed_with_errors`**. The ZIP contains five PDFs and a six-entry manifest. The sample sheet preserves numbers such as `00001` as text and includes a long name to exercise layout fitting.
+
+![Generated certificate using the included files](examples/generated-certificate.png)
 
 ## Requirements
 
@@ -40,7 +63,10 @@ The frontend uses HTML/CSS/JavaScript served by FastAPI, with a locally vendored
 | Alembic | Database migrations |
 | ReportLab | PDF rendering |
 | pytest and HTTPX | Service and API tests |
-| Local filesystem | Template assets and generated PDFs |
+| Local filesystem | Template assets, uploaded data/design snapshots, and generated PDFs |
+| HTML/CSS/JavaScript and Three.js | Interactive studio and locally served 3D artwork |
+| openpyxl and Pillow | Spreadsheet reading and image validation |
+| Node.js and jsdom (development only) | Frontend interaction tests and Three.js vendoring |
 
 PostgreSQL is a future option for higher concurrency. Multiple workers would also require changes to queue claiming and coordination.
 
@@ -48,10 +74,12 @@ PostgreSQL is a future option for higher concurrency. Multiple workers would als
 
 ```mermaid
 flowchart LR
-    Client[Client / Swagger UI] -->|Submit jobs and check progress| API[FastAPI]
+    Client[Visual studio / API client / Swagger UI] -->|Submit jobs and check progress| API[FastAPI]
     API --> DB[(Relational database)]
     Worker[Certificate worker] -->|Claim queued work and update results| DB
-    Template[Background image, layout, fonts] --> Worker
+    Template[Default template or saved custom design] --> Worker
+    Client -->|Image and spreadsheet uploads| API
+    API -->|Save upload and job snapshots| Storage
     Worker -->|Write PDFs| Storage[Local file storage]
     Storage -->|Read PDFs and build ZIP| API
     API -->|Status and downloads| Client
@@ -80,18 +108,15 @@ The initial renderer uses a high-resolution PNG background with dynamic text dra
 2. Include static artwork, logos, borders, signatures, and fixed wording.
 3. Leave blank spaces for the recipient name, course/event name, issue date, and certificate ID.
 4. Export a high-resolution PNG. For A4 at approximately 300 DPI, use about 3508 × 2480 pixels.
-5. Store the background with the layout configuration and bundled fonts.
+5. Upload the background in the studio and position spreadsheet fields, or save it as `app/templates/default/background.png` for the fixed-template API.
 6. Generate and visually inspect a sample PDF to calibrate placement.
 
 The exported image contains no placeholder text in the dynamic areas. The backend fills those areas for every recipient.
 
 ```text
 app/templates/default/
-├── background.png
-├── layout.json
-└── fonts/
-    ├── regular.ttf
-    └── bold.ttf
+├── layout.json       # Included fixed field positions
+└── background.png    # Optional Canva export; otherwise a vector design is drawn
 ```
 
 Example layout configuration (positions are illustrative):
@@ -131,7 +156,7 @@ Text is measured before drawing. Long text shrinks to the configured minimum fon
 
 The default design uses standard PDF Helvetica fonts and accepts printable ASCII names and course titles. Unsupported characters are rejected. Custom fonts must have appropriate redistribution rights and require renderer changes. Scripts requiring complex text shaping need additional renderer support.
 
-Jobs record their template version. Assets belonging to a version remain immutable while jobs depend on them. The original `/jobs` endpoint uses this fixed template. The visual builder additionally supports uploaded backgrounds and per-job field layouts.
+Jobs record their template version. Keep fixed-template assets unchanged while queued jobs depend on them. Custom jobs copy their background and layout into an immutable job snapshot. The original `/jobs` endpoint uses this fixed template. The visual builder additionally supports uploaded backgrounds and per-job field layouts.
 
 ## API design
 
@@ -174,7 +199,7 @@ For a batch containing valid recipients, return `202 Accepted` with a `Location`
 }
 ```
 
-If every recipient is invalid, save their outcomes and return `201 Created` with the job already `failed`. No rendering work is queued.
+For `/jobs`, if every recipient is invalid, save their outcomes and return `201 Created` with the job already `failed`. No rendering work is queued.
 
 Example submission:
 
@@ -185,6 +210,54 @@ curl -X POST http://127.0.0.1:8000/jobs \
 ```
 
 On Windows PowerShell, use `curl.exe` for this command. Save the example JSON as `request.json` first.
+
+### Create a custom design job
+
+The visual studio performs this workflow automatically. API clients can use the same endpoints:
+
+| Endpoint | Input | Result |
+| --- | --- | --- |
+| `POST /builder/images` | Multipart `file`: PNG/JPEG | `image_id`, pixel dimensions, and preview URL |
+| `GET /builder/images/{image_id}` | Uploaded image UUID | Normalized PNG background |
+| `POST /builder/sheets` | Multipart `file`: XLSX/CSV | `sheet_id`, columns, first ten rows, and total row count |
+| `POST /builder/jobs` | Uploaded IDs, name column, page size, and field definitions | Job ID and accepted/rejected counts |
+
+Upload example (Bash):
+
+```bash
+curl -F "file=@examples/certificate-background.png" http://127.0.0.1:8000/builder/images
+curl -F "file=@examples/recipients.xlsx" http://127.0.0.1:8000/builder/sheets
+```
+
+On PowerShell, use `curl.exe`. Substitute the returned UUIDs in this request:
+
+```json
+{
+  "image_id": "RETURNED_IMAGE_UUID",
+  "sheet_id": "RETURNED_SHEET_UUID",
+  "name_column": "Name",
+  "title": "Course completion certificates",
+  "width_mm": 297,
+  "height_mm": 210,
+  "fields": [
+    {
+      "column": "Name",
+      "x_mm": 148.5,
+      "y_mm": 95,
+      "max_width_mm": 235,
+      "font": "Times-Bold",
+      "font_size_pt": 34,
+      "min_font_size_pt": 18,
+      "align": "center",
+      "color": "#122b47"
+    }
+  ]
+}
+```
+
+Builder jobs return `202 Accepted`, including an all-invalid batch whose recorded status is already `failed`. Mapped columns must exist and text boxes must fit within page bounds. Designs support up to 30 fields, page dimensions between 50 and 420 mm, and these fonts: `Helvetica`, `Helvetica-Bold`, `Times-Roman`, `Times-Bold`, and `Courier`.
+
+Uploaded sheet rows and mapped text are saved in the job snapshot. An email column in a spreadsheet is an ordinary column; it is not validated as contact information or used for delivery. Use the shared status, result, PDF, and ZIP endpoints below for builder jobs.
 
 ### Check progress
 
@@ -272,7 +345,7 @@ curl -o certificates.zip http://127.0.0.1:8000/jobs/JOB_ID/download
 
 ## Validation policy
 
-Request-level errors reject the batch: malformed JSON, invalid shared fields, or a missing, empty, non-list, or oversized recipients list. The initial maximum is configurable, with a proposed default of 1,000 entries.
+Request-level errors reject the batch: malformed JSON, invalid shared fields, or a missing, empty, non-list, or oversized recipients list. The initial maximum is configurable, with a default of 1,000 entries.
 
 Recipient-level errors are recorded independently: a non-object entry, missing or blank name, excessive field length, invalid optional email, or unsupported characters. The outer request is validated first, then entries are validated individually so nested validation does not reject the whole batch.
 
@@ -306,7 +379,7 @@ Name and course fields allow up to 150 characters; references allow up to 100. L
 | `attempt_count` | Processing attempts |
 | `started_at`, `completed_at` | Item lifecycle timestamps |
 
-Enforce uniqueness for `(job_id, input_index)` and non-null certificate IDs. Add indexes for queued-job selection and item status queries. SQLite foreign keys must be enabled on every connection; use short transactions, a busy timeout, and WAL mode for the intended API/worker access pattern.
+The schema enforces uniqueness for `(job_id, input_index)` and non-null certificate IDs. Queue and item queries are indexed. SQLite connections enable foreign keys, a five-second busy timeout, and WAL mode; rendering runs outside short database transactions.
 
 ## Status model
 
@@ -353,34 +426,39 @@ Missing template assets or fonts fail startup clearly. A database outage stops p
 
 ```text
 app/
-├── main.py
-├── config.py
-├── database.py
-├── models.py
-├── schemas.py
-├── api/
-│   ├── jobs.py
-│   └── downloads.py
-├── services/
-│   ├── jobs.py
-│   ├── validation.py
-│   ├── certificates.py
-│   └── storage.py
-├── worker.py
-└── templates/default/
+├── main.py                  # Fixed-template jobs, status, results, downloads
+├── builder.py               # Upload parsing, design validation, custom jobs
+├── config.py                # Environment settings
+├── database.py              # Models and database connection
+├── schemas.py               # Fixed-template request validation
+├── renderer.py              # Background and text PDF rendering
+├── worker.py                # Processing, failure isolation, recovery
+├── static/
+│   ├── index.html
+│   ├── style.css
+│   ├── studio.js            # Editor and batch workflow
+│   ├── scene.js             # Three.js decoration and motion lifecycle
+│   └── vendor/              # Three.js modules and license
+└── templates/default/layout.json
 migrations/
+├── env.py
+└── versions/0001_initial.py
+examples/                    # Dummy inputs and generated sample
+scripts/vendor-three.mjs
 tests/
-├── test_jobs.py
-├── test_validation.py
-├── test_certificates.py
-├── test_worker.py
-└── test_downloads.py
-README.md
+├── test_application.py
+├── test_builder.py
+└── ui.test.mjs
+alembic.ini
+package.json
+package-lock.json
 pyproject.toml
+request.json
 .env.example
+README.md
 ```
 
-Routes handle HTTP concerns. Services manage lifecycle, rendering, and storage. The worker coordinates them. The renderer has no FastAPI dependency so it can be tested directly or replaced later.
+The renderer has no FastAPI dependency and can be tested directly. Routes live in `main.py` and `builder.py`; the worker coordinates persistence, rendering, and file writes.
 
 ## Setup and execution
 
@@ -411,7 +489,7 @@ python -m pip install -e ".[dev]"
 python -m alembic upgrade head
 ```
 
-Proposed configuration:
+Configuration defaults:
 
 ```dotenv
 DATABASE_URL=sqlite:///./storage/certificates.db
@@ -432,17 +510,28 @@ python -m uvicorn app.main:app --reload
 python -m app.worker
 ```
 
+The visual studio is available at `http://127.0.0.1:8000/`. No Node process or frontend build is required for normal use.
+
 Interactive API documentation is available at `http://127.0.0.1:8000/docs`. Both processes must use the same configuration and persistent storage.
 
 ## Tests
 
-Run tests:
+Run the backend tests (14 tests):
 
 ```bash
 python -m pytest
 ```
 
 Tests use isolated temporary databases and storage directories.
+
+Run frontend DOM interaction tests (4 tests; Node.js 20 or newer recommended):
+
+```bash
+npm ci
+npm test
+```
+
+These exercise upload state, field placement, keyboard movement, layer selection, color edits, undo/redo, zoom, recipient previews, and submission/results. They simulate the DOM and do not verify actual browser rendering or WebGL.
 
 | Area | Coverage |
 | --- | --- |
@@ -475,8 +564,6 @@ For larger deployments, consider PostgreSQL, coordinated workers or a dedicated 
 
 ## Implementation notes
 
-The compact implementation places routes in `app/main.py`, models and connection setup in `app/database.py`, validation in `app/schemas.py`, PDF generation in `app/renderer.py`, and processing in `app/worker.py`. The structure above illustrates potential future service extraction.
-
 The API and worker create missing tables on first startup for convenient local use. Run Alembic on a fresh database before starting either process to establish migration history. If you previously created tables through startup, use `python -m alembic stamp head` only after confirming the schema matches the current initial migration. Future schema changes should use migrations.
 
 The worker lock lives in `STORAGE_DIR`; all workers using the same database must also share that directory. Rendering is sequential, and an ordinary item exception is terminal rather than automatically retried. The attempt limit handles work interrupted by process crashes.
@@ -485,7 +572,26 @@ Place an optional `background.png` in `app/templates/default/` and adjust `layou
 
 ## Verification
 
-The initial implementation passes 14 automated tests. A separate worker process was also exercised against a submitted batch, producing two PDFs and one validation failure, and a sample PDF was visually checked. The current dependency combination emits a Starlette TestClient deprecation warning; tests still pass. PyMuPDF was used locally for visual inspection and is not an application dependency.
+The implementation passes **14 Python tests and 4 frontend DOM interaction tests**. JavaScript syntax and locally served Three.js assets were also checked.
+
+On 6 October 2026, the included dummy background and Excel file were submitted to the running localhost API and processed by a separate worker:
+
+| Check | Result |
+| --- | --- |
+| Image and XLSX upload | Accepted and parsed |
+| Leading-zero identifiers | `00001` preserved through Excel import and PDF output |
+| Custom mappings | Name, course, issue date, and number present in every successful PDF |
+| Individual validation failure | Blank name rejected; five other recipients succeeded |
+| Progress | Monotonic progress ending at 100% |
+| Final status | `completed_with_errors`, 5 succeeded, 1 failed |
+| PDF downloads | Five parseable single-page PDFs with the uploaded background |
+| ZIP | Five PDFs and a six-entry manifest |
+| Download association | Certificate requested under another job returned 404 |
+| Visual output | Normal and long-name certificate PDFs inspected; text fit and placement checked |
+
+The files in `examples/` let you repeat this check. The generated background is illustrative AI-created dummy artwork, not an organization-issued certificate. PyMuPDF was used locally to inspect output and is not an application dependency.
+
+Browser responsiveness, real touch gestures, and GPU rendering remain unverified: browser automation was blocked by the tool URL policy. The current Python dependency combination emits a Starlette TestClient deprecation warning; the tests still pass.
 
 ## Studio design and motion
 
