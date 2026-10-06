@@ -27,8 +27,8 @@ The frontend uses HTML/CSS/JavaScript served by FastAPI, with a locally vendored
 The repository includes files from a live end-to-end check:
 
 - [Certificate background](examples/certificate-background.png): generated dummy artwork with blank areas for personalized text.
-- [Recipient Excel sheet](examples/recipients.xlsx): five valid recipients and one intentionally blank name.
-- [Generated sample PDF](examples/generated-certificate.pdf): the output for Aisha Khan.
+- [Recipient Excel sheet](examples/recipients.xlsx): one generic recipient named Demo Name.
+- [Generated sample PDF](examples/generated-certificate.pdf): the output for Demo Name.
 
 Start the API and worker, then upload the background and workbook through the studio. Select **Name** as the recipient name column and add the following fields. The sample uses a 297 × 210 mm page; enter these coordinates in the inspector for the illustrated result.
 
@@ -39,7 +39,7 @@ Start the API and worker, then upload the background and workbook through the st
 | Issue Date | 148.5 | 164 | 200 | Helvetica | 14 | `#425c64` |
 | Number | 148.5 | 180 | 200 | Helvetica | 12 | `#425c64` |
 
-Use center alignment for all four fields. Select a recipient in the preview dropdown, then generate. Expected result: **5 successful PDFs, 1 validation failure, 100% processed, and `completed_with_errors`**. The ZIP contains five PDFs and a six-entry manifest. The sample sheet preserves numbers such as `00001` as text and includes a long name to exercise layout fitting.
+Use center alignment for all four fields. Select a recipient in the preview dropdown, then generate. Expected result: **1 successful PDF, 0 failures, 100% processed, and `completed`**. The ZIP contains one PDF and a one-entry manifest. The sample uses generic values: Demo Name, Demo Course, and DEMO-001.
 
 ![Generated certificate using the included files](examples/generated-certificate.png)
 
@@ -173,12 +173,8 @@ Base URL for local development: `http://127.0.0.1:8000`.
   "recipients": [
     {
       "reference": "participant-001",
-      "name": "Aisha Khan",
-      "email": "aisha@example.com"
-    },
-    {
-      "reference": "participant-002",
-      "name": "Rahul Sharma"
+      "name": "Demo Name",
+      "email": "demo@example.com"
     }
   ]
 }
@@ -293,7 +289,7 @@ An optional `status` filter supports requests such as `?status=failed`. Paginati
     {
       "index": 0,
       "reference": "participant-001",
-      "name": "Aisha Khan",
+      "name": "Demo Name",
       "status": "succeeded",
       "certificate_id": "9bf22138-2c50-48f4-b449-af1e165b9a61",
       "download_url": "/jobs/6c014a7e-13e1-4f50-952e-7ae61c948a8b/certificates/9bf22138-2c50-48f4-b449-af1e165b9a61",
@@ -589,7 +585,7 @@ On 6 October 2026, the included dummy background and Excel file were submitted t
 | Download association | Certificate requested under another job returned 404 |
 | Visual output | Normal and long-name certificate PDFs inspected; text fit and placement checked |
 
-The files in `examples/` let you repeat this check. The generated background is illustrative AI-created dummy artwork, not an organization-issued certificate. PyMuPDF was used locally to inspect output and is not an application dependency.
+The historical six-row check above verified failure isolation. The files in `examples/` now contain only one generic Demo Name sample, which was also checked through the live API. The generated background is illustrative AI-created dummy artwork, not an organization-issued certificate. PyMuPDF was used locally to inspect output and is not an application dependency.
 
 Browser responsiveness, real touch gestures, and GPU rendering remain unverified: browser automation was blocked by the tool URL policy. The current Python dependency combination emits a Starlette TestClient deprecation warning; the tests still pass.
 

@@ -20,7 +20,7 @@ def test_uploaded_design_excel_and_custom_fields(tmp_path):
         background = client.post("/builder/images", files={"file": ("design.png", image.getvalue(), "image/png")}).json()
         workbook = Workbook()
         workbook.active.append(["Name", "Number"])
-        workbook.active.append(["Aisha Khan", "00123"])
+        workbook.active.append(["Demo Name", "00123"])
         workbook.active.append([None, "456"])
         data = io.BytesIO()
         workbook.save(data)
@@ -41,7 +41,7 @@ def test_uploaded_design_excel_and_custom_fields(tmp_path):
         result = client.get(f"/jobs/{job}/recipients").json()["items"][0]
         pdf = PdfReader(io.BytesIO(client.get(result["download_url"]).content))
         text = pdf.pages[0].extract_text()
-        assert "Aisha Khan" in text and "00123" in text
+        assert "Demo Name" in text and "00123" in text
         assert len(pdf.pages[0].images) == 1
         assert client.get(f"/jobs/{job}/download").status_code == 200
         payload["fields"][0]["column"] = "Missing"

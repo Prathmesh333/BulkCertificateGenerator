@@ -15,7 +15,7 @@ function studio(){
  w.HTMLCanvasElement.prototype.getContext=()=>({measureText:text=>({width:text.length*10})});
  w.HTMLElement.prototype.scrollIntoView=()=>{};
  w.HTMLElement.prototype.setPointerCapture=()=>{};
- w.fetch=async (url)=>({ok:true,json:async()=>url.includes('/images')?{image_id:'image',width:1400,height:990,url:'/image.png'}:url.includes('/sheets')?{sheet_id:'sheet',columns:['Name','Number'],rows:[{Name:'Aisha',Number:'001'},{Name:'Rahul',Number:'002'}],total:2}:url==='/builder/jobs'?{job_id:'job'}:url.includes('/recipients')?{items:[{name:'Aisha',status:'succeeded',download_url:'/certificate.pdf'}]}:{status:'completed',progress_percent:100,counts:{succeeded:2,failed:0,pending:0,processing:0}}});
+ w.fetch=async (url)=>({ok:true,json:async()=>url.includes('/images')?{image_id:'image',width:1400,height:990,url:'/image.png'}:url.includes('/sheets')?{sheet_id:'sheet',columns:['Name','Number'],rows:[{Name:'Demo Name',Number:'001'},{Name:'Demo Recipient',Number:'002'}],total:2}:url==='/builder/jobs'?{job_id:'job'}:url.includes('/recipients')?{items:[{name:'Demo Name',status:'succeeded',download_url:'/certificate.pdf'}]}:{status:'completed',progress_percent:100,counts:{succeeded:2,failed:0,pending:0,processing:0}}});
  w.eval(code);
  return {w,dom,$:id=>w.document.getElementById(id)};
 }
@@ -47,7 +47,7 @@ test('zoom, guides, keyboard placement, and preview recipient',async()=>{
  w.document.querySelector('.placed').dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
  assert.equal(Number($('field-x').value),before+1);
  $('preview-row').value='1';$('preview-row').dispatchEvent(new w.Event('change'));
- assert.equal(w.document.querySelector('.placed').textContent,'Rahul');
+ assert.equal(w.document.querySelector('.placed').textContent,'Demo Recipient');
  $('motion-toggle').click();assert.equal(w.document.body.classList.contains('motion-paused'),true);
  dom.window.close();
 });

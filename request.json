@@ -1,9 +1,7 @@
 {
-  "course_name": "Introduction to Python",
+  "course_name": "Demo Course",
   "issue_date": "2026-10-06",
   "recipients": [
-    {"reference": "participant-001", "name": "Aisha Khan", "email": "aisha@example.com"},
-    {"reference": "participant-002", "name": "Rahul Sharma"},
-    {"reference": "participant-003", "name": ""}
+    {"reference": "demo-001", "name": "Demo Name", "email": "demo@example.com"}
   ]
 }

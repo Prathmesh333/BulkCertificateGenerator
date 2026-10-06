@@ -23,12 +23,12 @@ def system(tmp_path):
 
 def submit(client, recipients=None):
     return client.post("/jobs", json={"course_name": "Python Course", "issue_date": "2026-10-06",
-                                     "recipients": recipients if recipients is not None else [{"name": "Aisha Khan"}]})
+                                     "recipients": recipients if recipients is not None else [{"name": "Demo Name"}]})
 
 
 def test_complete_workflow(system):
     client, app, settings = system
-    response = submit(client, [{"name": "Aisha Khan"}, {"name": ""}, {"name": "Rahul Sharma"}])
+    response = submit(client, [{"name": "Demo Name"}, {"name": ""}, {"name": "Demo Recipient"}])
     assert response.status_code == 202
     job = response.json()["job_id"]
     assert response.json()["accepted"] == 2
@@ -44,7 +44,7 @@ def test_complete_workflow(system):
     assert pdf.headers["content-type"] == "application/pdf"
     reader = PdfReader(io.BytesIO(pdf.content))
     assert len(reader.pages) == 1
-    assert "Aisha Khan" in reader.pages[0].extract_text()
+    assert "Demo Name" in reader.pages[0].extract_text()
     assert float(reader.pages[0].mediabox.width) == pytest.approx(841.89, abs=.1)
     archive = client.get(f"/jobs/{job}/download")
     with zipfile.ZipFile(io.BytesIO(archive.content)) as output:
