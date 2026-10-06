@@ -82,7 +82,7 @@ test('rectangle resizing, page alignment and snapping',async()=>{
  const {w,dom,$}=studio();await load(w);$('columns').firstChild.click();
  const handle=w.document.querySelector('.resize-handle');
  const before=Number($('field-width').value);
- handle.dispatchEvent(new w.MouseEvent('pointerdown',{clientX:200,clientY:200,bubbles:true}));
+ handle.onpointerdown({clientX:200,pointerId:1,stopPropagation(){}});
  handle.onpointermove({clientX:220});handle.onpointerup();
  assert.ok(Number($('field-width').value)>before);
  w.document.querySelector('[data-place="center"]').click();
