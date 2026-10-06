@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "page": {"width_mm": 297, "height_mm": 210},
+  "fields": {
+    "recipient_name": {"x_mm": 148.5, "y_mm": 96, "max_width_mm": 230, "font": "Helvetica-Bold", "font_size_pt": 32, "min_font_size_pt": 18},
+    "course_name": {"x_mm": 148.5, "y_mm": 126, "max_width_mm": 230, "font": "Helvetica", "font_size_pt": 22, "min_font_size_pt": 14},
+    "issue_date": {"x_mm": 148.5, "y_mm": 153, "max_width_mm": 200, "font": "Helvetica", "font_size_pt": 14, "min_font_size_pt": 12},
+    "certificate_id": {"x_mm": 148.5, "y_mm": 179, "max_width_mm": 240, "font": "Helvetica", "font_size_pt": 9, "min_font_size_pt": 8}
+  }
+}

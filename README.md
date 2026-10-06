@@ -2,7 +2,7 @@
 
 A Python backend for generating personalized PDF certificates for many recipients in one request. The API accepts a batch, validates each recipient, processes certificates in the background, and exposes progress and downloads.
 
-**Project status:** Architecture and API design. The application, migrations, template assets, and tests have not been implemented yet. Commands and API examples below describe the intended implementation.
+**Project status:** Working implementation with API, background worker, PDF rendering, downloads, migrations, and automated tests. The default certificate uses a built-in vector design; add a Canva background PNG to customize it.
 
 ## Requirements
 
@@ -89,7 +89,7 @@ Example layout configuration (positions are illustrative):
       "x_mm": 148.5,
       "y_mm": 94,
       "max_width_mm": 225,
-      "font": "bold",
+      "font": "Helvetica-Bold",
       "font_size_pt": 32,
       "min_font_size_pt": 18,
       "align": "center",
@@ -99,7 +99,7 @@ Example layout configuration (positions are illustrative):
       "x_mm": 148.5,
       "y_mm": 124,
       "max_width_mm": 220,
-      "font": "regular",
+      "font": "Helvetica",
       "font_size_pt": 22,
       "min_font_size_pt": 14,
       "align": "center",
@@ -113,7 +113,7 @@ Coordinates are measured from the top-left corner in millimetres; `y_mm` is the 
 
 Text is measured before drawing. Long text shrinks to the configured minimum font size; text that still cannot fit produces a clear item failure. Names retain their spelling and capitalization after trimming surrounding whitespace.
 
-Fonts must be bundled with appropriate redistribution rights. The implementation will document its supported character set and reject unsupported characters rather than render missing glyphs. Scripts requiring complex text shaping need additional renderer support.
+The default design uses standard PDF Helvetica fonts and accepts printable ASCII names and course titles. Unsupported characters are rejected. Custom fonts must have appropriate redistribution rights and require renderer changes. Scripts requiring complex text shaping need additional renderer support.
 
 Jobs record their template version. Assets belonging to a version remain immutable while jobs depend on them. Template editing, template uploads, and multiple designs are outside the initial scope.
 
@@ -160,7 +160,7 @@ For a batch containing valid recipients, return `202 Accepted` with a `Location`
 
 If every recipient is invalid, save their outcomes and return `201 Created` with the job already `failed`. No rendering work is queued.
 
-Example submission after implementation:
+Example submission:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/jobs \
@@ -219,8 +219,8 @@ An optional `status` filter supports requests such as `?status=failed`. Paginati
       "download_url": null,
       "error": {
         "stage": "validation",
-        "code": "INVALID_NAME",
-        "message": "Recipient name must not be blank."
+        "code": "INVALID_RECIPIENT",
+        "message": "name: String should have at least 1 character"
       }
     }
   ],
@@ -237,9 +237,9 @@ An optional `status` filter supports requests such as `?status=failed`. Paginati
 | `GET /jobs/{job_id}/certificates/{certificate_id}` | Download one successful PDF as soon as it is available |
 | `GET /jobs/{job_id}/download` | Download successful PDFs as a ZIP once the job is terminal |
 
-The ZIP includes a `manifest.json` mapping input entries to success or failure. It is built on demand in a temporary file, avoiding loading the entire batch into memory. Temporary archives are removed after the response and stale temporary files are cleaned up on startup.
+The ZIP includes a `manifest.json` mapping input entries to success or failure. It is built on demand in a temporary file, avoiding loading the entire batch into memory. Temporary archives are removed after the response. A process crash can leave temporary archives in the operating system temporary directory; these may require manual cleanup.
 
-Example downloads after implementation:
+Example downloads:
 
 ```bash
 curl -o certificate.pdf http://127.0.0.1:8000/jobs/JOB_ID/certificates/CERTIFICATE_ID
@@ -260,7 +260,7 @@ Request-level errors reject the batch: malformed JSON, invalid shared fields, or
 
 Recipient-level errors are recorded independently: a non-object entry, missing or blank name, excessive field length, invalid optional email, or unsupported characters. The outer request is validated first, then entries are validated individually so nested validation does not reject the whole batch.
 
-Field limits will be explicit in schemas and OpenAPI documentation. Duplicate names or emails are allowed: every input position represents a separate certificate request. Repeating a POST creates a new job; request idempotency is outside the initial scope.
+Name and course fields allow up to 150 characters; references allow up to 100. Limits appear in schemas and OpenAPI documentation. Duplicate names or emails are allowed: every input position represents a separate certificate request. Repeating a POST creates a new job; request idempotency is outside the initial scope.
 
 ## Data model
 
@@ -333,7 +333,7 @@ If a crash occurs after saving a PDF but before committing success, recovery can
 
 Missing template assets or fonts fail startup clearly. A database outage stops processing because results cannot be recorded reliably. Detailed exceptions are logged with job/item IDs; API errors omit internal tracebacks. Storage and rendering failures remain isolated to individual entries whenever the database is available.
 
-## Planned project structure
+## Code organization
 
 ```text
 app/
@@ -366,9 +366,9 @@ pyproject.toml
 
 Routes handle HTTP concerns. Services manage lifecycle, rendering, and storage. The worker coordinates them. The renderer has no FastAPI dependency so it can be tested directly or replaced later.
 
-## Planned setup and execution
+## Setup and execution
 
-These commands become usable once the corresponding application files are implemented. The target Python version is 3.11 or newer.
+Requires Python 3.11 or newer. Run all commands from the repository root.
 
 ```bash
 git clone https://github.com/Prathmesh333/BulkCertificateGenerator.git
@@ -388,7 +388,7 @@ Activate the environment:
 source .venv/bin/activate
 ```
 
-Install dependencies, copy `.env.example` to `.env`, configure paths, and run migrations:
+Install dependencies and run migrations. `.env.example` lists configuration options; set them as environment variables in both terminals. The app does not automatically load `.env`:
 
 ```bash
 python -m pip install -e ".[dev]"
@@ -416,11 +416,11 @@ python -m uvicorn app.main:app --reload
 python -m app.worker
 ```
 
-Interactive API documentation will be available at `http://127.0.0.1:8000/docs`. Both processes must use the same configuration and persistent storage.
+Interactive API documentation is available at `http://127.0.0.1:8000/docs`. Both processes must use the same configuration and persistent storage.
 
-## Testing plan
+## Tests
 
-Planned test command:
+Run tests:
 
 ```bash
 python -m pytest
@@ -449,10 +449,24 @@ Generated files remain available until manually removed; automatic retention is 
 
 For larger deployments, consider PostgreSQL, coordinated workers or a dedicated task queue, object storage, request idempotency, retention policies, and authenticated access. These should follow completion of the required workflow.
 
-## Implementation sequence
+## Development approach
 
 1. Database schema, migrations, validation, and API contract.
 2. Fixed template assets and PDF renderer.
 3. Worker, failure isolation, and recovery.
 4. Progress endpoints and PDF/ZIP downloads.
 5. Automated tests, visual sample review, and updated runnable documentation.
+
+## Implementation notes
+
+The compact implementation places routes in `app/main.py`, models and connection setup in `app/database.py`, validation in `app/schemas.py`, PDF generation in `app/renderer.py`, and processing in `app/worker.py`. The structure above illustrates potential future service extraction.
+
+The API and worker create missing tables on first startup for convenient local use. Run Alembic on a fresh database before starting either process to establish migration history. If you previously created tables through startup, use `python -m alembic stamp head` only after confirming the schema matches the current initial migration. Future schema changes should use migrations.
+
+The worker lock lives in `STORAGE_DIR`; all workers using the same database must also share that directory. Rendering is sequential, and an ordinary item exception is terminal rather than automatically retried. The attempt limit handles work interrupted by process crashes.
+
+Place an optional `background.png` in `app/templates/default/` and adjust `layout.json` to use your Canva design. Without it, the renderer draws the built-in border and static wording. Only the configured dynamic text is drawn over an image background. Template version changes are detected at generation time; retain the current version while jobs are pending.
+
+## Verification
+
+The initial implementation passes 12 automated tests. A separate worker process was also exercised against a submitted batch, producing two PDFs and one validation failure, and a sample PDF was visually checked. The current dependency combination emits a Starlette TestClient deprecation warning; tests still pass. PyMuPDF was used locally for visual inspection and is not an application dependency.
