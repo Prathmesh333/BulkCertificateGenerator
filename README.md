@@ -2,7 +2,7 @@
 
 A Python application with a visual certificate studio and a bulk-generation API. Upload a certificate design and an Excel/CSV recipient list, place text fields on the canvas, and generate personalized PDFs for the entire batch. The API accepts a batch, validates each recipient, processes certificates in the background, and exposes progress and downloads.
 
-**Project status:** Working FastAPI backend and interactive frontend, with background processing, PDF/ZIP downloads, migrations, 14 Python tests, and 4 frontend interaction tests. The fixed-template API includes a built-in certificate design; the visual studio supports uploaded backgrounds and custom fields.
+**Project status:** Working FastAPI backend and interactive frontend, with background processing, PDF/ZIP downloads, migrations, 14 Python tests, and 6 frontend interaction tests. The fixed-template API includes a built-in certificate design; the visual studio supports uploaded backgrounds and custom fields.
 
 [Setup](#setup-and-execution) · [Visual builder](#visual-certificate-builder) · [Sample files](#try-the-included-sample-files) · [API](#api-design) · [Tests](#tests)
 
@@ -513,7 +513,7 @@ python -m pytest
 
 Tests use isolated temporary databases and storage directories.
 
-Run frontend DOM interaction tests (4 tests; Node.js 20 or newer recommended):
+Run frontend DOM interaction tests (6 tests; Node.js 20 or newer recommended):
 
 ```bash
 npm ci
@@ -561,7 +561,7 @@ Place an optional `background.png` in `app/templates/default/` and adjust `layou
 
 ## Verification
 
-The implementation passes **14 Python tests and 4 frontend DOM interaction tests**. JavaScript syntax and locally served Three.js assets were also checked.
+The implementation passes **14 Python tests and 6 frontend DOM interaction tests**. JavaScript syntax and locally served Three.js assets were also checked.
 
 On 6 October 2026, the included dummy background and Excel file were submitted to the running localhost API and processed by a separate worker:
 
@@ -584,7 +584,7 @@ Browser responsiveness, real touch gestures, and GPU rendering remain unverified
 
 ## Studio design and motion
 
-The studio uses coral, lilac, mint, and warm gold surfaces, geometric illustrations, and a pointer-responsive Three.js certificate sculpture. The editor includes layer selection, color presets, alignment guides, zoom, undo/redo, file-drop feedback, and a one-time batch-completion celebration.
+The studio uses a compact charcoal header, white editing panels, restrained violet accents, locally hosted DM Sans typography, and a pointer-responsive Three.js certificate sculpture. A single stylesheet defines the responsive layout, control sizes, and accessible interaction states. The editor includes layer selection, color presets, alignment guides, zoom, undo/redo, file-drop feedback, and a one-time batch-completion celebration.
 
 Decorative rendering pauses off-screen, while the tab is hidden, or through **Pause motion**. System reduced-motion preferences disable spatial animation and the continuous Three.js loop. A CSS illustration remains visible when WebGL is unavailable. The certificate editor and generation flow do not depend on WebGL.
 
@@ -596,4 +596,6 @@ npm run vendor
 npm test
 ```
 
-The frontend has four DOM interaction tests covering field placement, editing, undo/redo, zoom, keyboard movement, preview selection, and batch submission/results. These complement the 14 Python tests. JavaScript syntax checks and served assets were verified. Visual responsiveness, GPU rendering, and real touch behavior have not been verified in a browser because browser automation was blocked by the tool URL policy.
+The frontend has six DOM interaction tests covering field placement, editing, undo/redo, zoom, keyboard movement, preview selection, and batch submission/results. These complement the 14 Python tests. JavaScript syntax checks and served assets were verified. Visual responsiveness, GPU rendering, and real touch behavior have not been verified in a browser because browser automation was blocked by the tool URL policy.
+
+The professional studio redesign follows the [premium-frontend-ui skill](https://github.com/github/awesome-copilot/blob/main/skills/premium-frontend-ui/SKILL.md), adapted to a working editor. DM Sans is included locally with its SIL Open Font License under `app/static/fonts/`. Upload controls remain keyboard accessible; numeric settings are optional, and text alignment preserves rectangle position.

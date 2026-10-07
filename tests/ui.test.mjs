@@ -92,3 +92,13 @@ test('rectangle resizing, page alignment and snapping',async()=>{
  assert.ok($('snap-guides').children.length);
  dom.window.close();
 });
+
+test('text alignment changes do not move the rectangle',async()=>{
+ const {w,dom,$}=studio();await load(w);$('columns').firstChild.click();
+ const before=w.eval('boxLeft(selected())');
+ $('align').value='left';$('align').dispatchEvent(new w.Event('input'));
+ assert.equal(w.eval('boxLeft(selected())'),before);
+ $('align').value='right';$('align').dispatchEvent(new w.Event('input'));
+ assert.equal(w.eval('boxLeft(selected())'),before);
+ dom.window.close();
+});
