@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 240">
+<defs><linearGradient id="paper" x2="1" y2="1"><stop stop-color="#fffef9"/><stop offset="1" stop-color="#f4f0fd"/></linearGradient><filter id="shadow"><feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#978bc5" flood-opacity=".24"/></filter></defs>
+<ellipse cx="229" cy="192" rx="153" ry="21" fill="#d5ccf6" opacity=".35"/>
+<g transform="translate(208 109) rotate(-12) skewX(18)" filter="url(#shadow)">
+<rect x="-130" y="-65" width="260" height="150" rx="3" fill="#d0c6ee"/>
+<rect x="-130" y="-75" width="260" height="150" rx="3" fill="#ede7fa"/>
+<rect x="-130" y="-85" width="260" height="150" rx="3" fill="url(#paper)" stroke="#e4daf2"/>
+<rect x="-116" y="-72" width="232" height="124" fill="none" stroke="#d1b777"/>
+<text y="-41" text-anchor="middle" font-family="Georgia,serif" font-size="13" letter-spacing="2" fill="#706281">CERTIFICATE</text>
+<path d="M-52-24H52M-70-5H70M-43 8H43" stroke="#d8cfe4" stroke-width="2"/>
+<circle cy="34" r="12" fill="#dfc783"/><circle cy="34" r="9" fill="none" stroke="#fff4d0"/>
+</g><circle cx="69" cy="46" r="12" fill="#ffa39c"/><path d="m347 67 12 20-12 20-12-20Z" fill="#90cbb8"/><circle cx="330" cy="197" r="5" fill="#b59ce9"/>
+</svg>

@@ -102,3 +102,15 @@ test('text alignment changes do not move the rectangle',async()=>{
  assert.equal(w.eval('boxLeft(selected())'),before);
  dom.window.close();
 });
+
+test('floating toolbar follows selection and edits the selected field',async()=>{
+ const {w,dom,$}=studio();assert.equal($('floating-tools').hidden,true);
+ await load(w);$('columns').firstChild.click();assert.equal($('floating-tools').hidden,false);
+ $('quick-font').value='Times-Roman';$('quick-font').dispatchEvent(new w.Event('input'));
+ $('quick-bold').click();assert.equal($('font').value,'Times-Bold');
+ $('quick-size').value='30';$('quick-size').dispatchEvent(new w.Event('input'));
+ assert.equal(w.eval('selected().font_size_pt'),30);
+ w.document.querySelector('[data-text-align="right"]').click();assert.equal(w.eval('selected().align'),'right');
+ $('canvas').dispatchEvent(new w.MouseEvent('pointerdown',{bubbles:true}));assert.equal($('floating-tools').hidden,true);
+ dom.window.close();
+});

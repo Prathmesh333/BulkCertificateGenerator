@@ -2,7 +2,7 @@
 
 A Python application with a visual certificate studio and a bulk-generation API. Upload a certificate design and an Excel/CSV recipient list, place text fields on the canvas, and generate personalized PDFs for the entire batch. The API accepts a batch, validates each recipient, processes certificates in the background, and exposes progress and downloads.
 
-**Project status:** Working FastAPI backend and interactive frontend, with background processing, PDF/ZIP downloads, migrations, 14 Python tests, and 6 frontend interaction tests. The fixed-template API includes a built-in certificate design; the visual studio supports uploaded backgrounds and custom fields.
+**Project status:** Working FastAPI backend and interactive frontend, with background processing, PDF/ZIP downloads, migrations, 14 Python tests, and 7 frontend interaction tests. The fixed-template API includes a built-in certificate design; the visual studio supports uploaded backgrounds and custom fields.
 
 [Setup](#setup-and-execution) · [Visual builder](#visual-certificate-builder) · [Sample files](#try-the-included-sample-files) · [API](#api-design) · [Tests](#tests)
 
@@ -20,7 +20,7 @@ Use **Try a ready-made example** to explore a complete example. Numbers with lea
 
 Custom fields can contain any spreadsheet column, including names, course titles, numbers, and dates. Text uses the current printable ASCII limitation. Each job stores an immutable background/layout/data snapshot under `storage/designs/{job_id}/`; editing the UI or uploading another design does not alter queued jobs. The builder adds `/builder/images`, `/builder/sheets`, and `/builder/jobs` endpoints while preserving the original fixed-template API.
 
-The frontend uses HTML/CSS/JavaScript served by FastAPI, with a locally vendored Three.js scene. Its preview approximates PDF font positioning; the generated PDF is the final output. Large text shrinks to fit or fails individually if it still cannot fit. Uploads and snapshots remain on local disk until manually removed. The fixed-template API satisfies the original single-template requirement; the visual builder adds optional custom design support.
+The frontend uses HTML/CSS/JavaScript served by FastAPI, with local SVG icons and illustrations. The earlier Three.js module remains in the repository but is not loaded by the current layout. Its preview approximates PDF font positioning; the generated PDF is the final output. Large text shrinks to fit or fails individually if it still cannot fit. Uploads and snapshots remain on local disk until manually removed. The fixed-template API satisfies the original single-template requirement; the visual builder adds optional custom design support.
 
 ## Try the included sample files
 
@@ -57,7 +57,7 @@ Use center alignment for all four fields. Select a recipient in the preview drop
 | ReportLab | PDF rendering |
 | pytest and HTTPX | Service and API tests |
 | Local filesystem | Template assets, uploaded data/design snapshots, and generated PDFs |
-| HTML/CSS/JavaScript and Three.js | Interactive studio and locally served 3D artwork |
+| HTML/CSS/JavaScript and SVG | Interactive studio, icons, and certificate illustration |
 | openpyxl and Pillow | Spreadsheet reading and image validation |
 | Node.js and jsdom (development only) | Frontend interaction tests and Three.js vendoring |
 
@@ -513,7 +513,7 @@ python -m pytest
 
 Tests use isolated temporary databases and storage directories.
 
-Run frontend DOM interaction tests (6 tests; Node.js 20 or newer recommended):
+Run frontend DOM interaction tests (7 tests; Node.js 20 or newer recommended):
 
 ```bash
 npm ci
@@ -561,7 +561,7 @@ Place an optional `background.png` in `app/templates/default/` and adjust `layou
 
 ## Verification
 
-The implementation passes **14 Python tests and 6 frontend DOM interaction tests**. JavaScript syntax and locally served Three.js assets were also checked.
+The implementation passes **14 Python tests and 7 frontend DOM interaction tests**. JavaScript syntax and locally served Three.js assets were also checked.
 
 On 6 October 2026, the included dummy background and Excel file were submitted to the running localhost API and processed by a separate worker:
 
@@ -584,9 +584,9 @@ Browser responsiveness, real touch gestures, and GPU rendering remain unverified
 
 ## Studio design and motion
 
-The studio uses a compact plum header, violet and coral highlights, mint upload surfaces, softly tinted editing panels, locally hosted DM Sans typography, and a pointer-responsive Three.js certificate sculpture. A single stylesheet defines the responsive layout, control sizes, and accessible interaction states. The editor includes layer selection, color presets, alignment guides, zoom, undo/redo, file-drop feedback, and a one-time batch-completion celebration.
+The studio follows the generated visual concept with a light lavender workspace, white editing panels, violet actions, locally hosted DM Sans typography, consistent SVG icons, and a certificate-stack SVG illustration. A floating formatting toolbar appears only while a text box is selected. A single stylesheet defines the responsive layout, control sizes, and accessible interaction states. The editor includes layer selection, color presets, alignment guides, zoom, undo/redo, file-drop feedback, and a one-time batch-completion celebration.
 
-Decorative rendering pauses off-screen, while the tab is hidden, or through **Pause motion**. System reduced-motion preferences disable spatial animation and the continuous Three.js loop. A CSS illustration remains visible when WebGL is unavailable. The certificate editor and generation flow do not depend on WebGL.
+Decorative CSS motion respects **Pause motion** and system reduced-motion preferences. The current layout uses a lightweight SVG illustration and does not start a WebGL rendering loop.
 
 Three.js 0.180.0 and its MIT license are checked into `app/static/vendor/`, so no CDN or Node process is needed to run the app. To update/rebuild frontend dependencies or run interaction tests:
 
@@ -596,6 +596,6 @@ npm run vendor
 npm test
 ```
 
-The frontend has six DOM interaction tests covering field placement, editing, undo/redo, zoom, keyboard movement, preview selection, and batch submission/results. These complement the 14 Python tests. JavaScript syntax checks and served assets were verified. Visual responsiveness, GPU rendering, and real touch behavior have not been verified in a browser because browser automation was blocked by the tool URL policy.
+The frontend has seven DOM interaction tests covering field placement, editing, undo/redo, zoom, keyboard movement, preview selection, and batch submission/results. These complement the 14 Python tests. JavaScript syntax checks and served assets were verified. Visual responsiveness and real touch behavior have not been verified in a browser because browser automation was blocked by the tool URL policy.
 
 The professional studio redesign follows the [premium-frontend-ui skill](https://github.com/github/awesome-copilot/blob/main/skills/premium-frontend-ui/SKILL.md), adapted to a working editor. DM Sans is included locally with its SIL Open Font License under `app/static/fonts/`. Upload controls remain keyboard accessible; numeric settings are optional, and text alignment preserves rectangle position.
