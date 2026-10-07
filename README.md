@@ -584,7 +584,7 @@ Browser responsiveness, real touch gestures, and GPU rendering remain unverified
 
 ## Studio design and motion
 
-The studio uses a compact charcoal header, white editing panels, restrained violet accents, locally hosted DM Sans typography, and a pointer-responsive Three.js certificate sculpture. A single stylesheet defines the responsive layout, control sizes, and accessible interaction states. The editor includes layer selection, color presets, alignment guides, zoom, undo/redo, file-drop feedback, and a one-time batch-completion celebration.
+The studio uses a compact plum header, violet and coral highlights, mint upload surfaces, softly tinted editing panels, locally hosted DM Sans typography, and a pointer-responsive Three.js certificate sculpture. A single stylesheet defines the responsive layout, control sizes, and accessible interaction states. The editor includes layer selection, color presets, alignment guides, zoom, undo/redo, file-drop feedback, and a one-time batch-completion celebration.
 
 Decorative rendering pauses off-screen, while the tab is hidden, or through **Pause motion**. System reduced-motion preferences disable spatial animation and the continuous Three.js loop. A CSS illustration remains visible when WebGL is unavailable. The certificate editor and generation flow do not depend on WebGL.
 
