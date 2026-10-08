@@ -561,7 +561,7 @@ Place an optional `background.png` in `app/templates/default/` and adjust `layou
 
 ## Verification
 
-The implementation passes **14 Python tests and 7 frontend DOM interaction tests**. JavaScript syntax and locally served Three.js assets were also checked.
+The implementation passes **17 Python tests and 8 frontend DOM interaction tests**. JavaScript syntax and locally served Three.js assets were also checked.
 
 On 6 October 2026, the included dummy background and Excel file were submitted to the running localhost API and processed by a separate worker:
 
@@ -596,6 +596,30 @@ npm run vendor
 npm test
 ```
 
-The frontend has seven DOM interaction tests covering field placement, editing, undo/redo, zoom, keyboard movement, preview selection, and batch submission/results. These complement the 14 Python tests. JavaScript syntax checks and served assets were verified. Visual responsiveness and real touch behavior have not been verified in a browser because browser automation was blocked by the tool URL policy.
+The frontend has eight DOM interaction tests covering field placement, editing, undo/redo, zoom, keyboard movement, preview selection, and batch submission/results. These complement the 17 Python tests. JavaScript syntax checks and served assets were verified. Visual responsiveness and real touch behavior have not been verified in a browser because browser automation was blocked by the tool URL policy.
 
 The professional studio redesign follows the [premium-frontend-ui skill](https://github.com/github/awesome-copilot/blob/main/skills/premium-frontend-ui/SKILL.md), adapted to a working editor. DM Sans is included locally with its SIL Open Font License under `app/static/fonts/`. Upload controls remain keyboard accessible; numeric settings are optional, and text alignment preserves rectangle position.
+
+## Vercel deployment (serverless demo)
+
+The repository includes a Vercel configuration for the existing Python API and studio. Use **Vercel + Neon PostgreSQL + Cloudflare R2**. This is designed to fit small demo workloads within provider free allowances; it does not guarantee unlimited free use. R2 activation may require billing details. No Railway service is needed.
+
+1. Create a Neon database and copy its PostgreSQL connection URL. Use `postgresql+psycopg://` as the scheme and retain SSL parameters.
+2. Create a **private** R2 bucket and an R2 S3 API token scoped to that bucket with object read/write access. Copy its endpoint and access keys. Do not make the bucket public.
+3. Import this GitHub repository into Vercel. Select the **FastAPI** framework preset and the repository root. Leave the build command at its framework default. `requirements.txt` installs the application with its cloud dependencies; `vercel.json` identifies `app/main.py` and sets a 300-second maximum invocation.
+4. Set every variable shown in `.env.vercel.example` in Vercel's environment settings, using real connection credentials. Do not commit credentials. `AWS_DEFAULT_REGION=auto` is for R2; another S3 provider may need a different region.
+5. Deploy, open `/runtime`, and confirm `processing_mode` is `serverless`. Upload the generic sample files, place fields, and generate. Verify progress, individual PDF downloads, and ZIP download. Repeat after a redeploy to verify remote persistence.
+
+The API initializes its existing tables on startup for a fresh database. Local development still uses SQLite, disk storage, and `python -m app.worker`. Do not run the continuous worker against the serverless database.
+
+### Processing and persistence
+
+In serverless mode the studio calls `POST /jobs/{job_id}/process` before each progress refresh. Each request renders at most 10 recipients and starts no new recipient after 120 seconds. PDFs still render in Python. PostgreSQL stores statuses; R2 stores uploads, immutable design snapshots, PDFs, and ZIP archives. Local `/tmp` files are working copies, not durable storage. A per-job PostgreSQL transaction advisory lock prevents overlapping invocations from processing the same job, including with a pooled database URL. Interrupted items are retried on the next invocation, with the existing attempt limit. Completed recipients are not regenerated.
+
+**The tab drives processing.** Closing it stops further batch requests; reopening the studio resumes the saved job in that browser. API clients must call the process endpoint repeatedly until the status is terminal. This is a resumable demo workflow, not an independently scheduled queue. A single rendering/storage operation can still hit the platform timeout; its next invocation recovers the interrupted item.
+
+Uploads are capped at **3,000,000 bytes per file** in the deployment example to leave room below Vercel's request-body limit. This version deliberately rejects larger uploads; it does not implement direct-to-storage uploads. The example caps jobs at 100 recipients. PDFs and ZIPs download using private 10-minute signed object URLs, avoiding function response-size limits. ZIP creation is still bounded by function runtime; reduce job size if it times out. All jobs are accessible by their UUID URLs: there is no user authentication. Keep the interview deployment protected with Vercel deployment access controls, and set bucket lifecycle expiration and provider usage limits before sharing widely. Uploads and outputs are not automatically deleted by the application.
+
+Cloud integration requires live credentials and a deployment smoke test. Unit tests exercise bounded processing, job isolation, persistence through an empty local cache, and configuration validation; they do not prove live PostgreSQL locking or R2/Vercel interoperability.
+
+References: [Vercel FastAPI deployment](https://vercel.com/docs/frameworks/backend/fastapi), [Vercel function limits](https://vercel.com/docs/functions/limitations).

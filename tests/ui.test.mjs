@@ -19,6 +19,23 @@ function studio(){
  w.eval(code);
  return {w,dom,$:id=>w.document.getElementById(id)};
 }
+
+test('serverless studio requests a batch before reading progress',async()=>{
+ const {w,dom,$}=studio();
+ const original=w.fetch;
+ const calls=[];
+ w.fetch=async(url,options)=>{
+  calls.push([url,options?.method]);
+  if(url==='/runtime')return {ok:true,json:async()=>({processing_mode:'serverless'})};
+  return original(url,options);
+ };
+ await load(w);$('columns').firstChild.click();$('generate').click();
+ await new Promise(resolve=>setTimeout(resolve,30));
+ assert.ok(calls.some(([url,method])=>url==='/jobs/job/process'&&method==='POST'));
+ assert.ok(calls.findIndex(([url])=>url==='/jobs/job/process')<calls.findIndex(([url])=>url==='/jobs/job'));
+ assert.equal($('zip-download').hidden,false);
+ dom.window.close();
+});
 async function load(w){await w.eval("imageUpload(new File(['x'],'design.png'))");await w.eval("sheetUpload(new File(['x'],'names.csv'))");}
 
 test('upload, place layers, change colors, undo and redo',async()=>{

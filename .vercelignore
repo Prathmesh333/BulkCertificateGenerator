@@ -1,0 +1,9 @@
+.venv
+node_modules
+storage
+outputs
+design
+examples
+tests
+.env
+.env.*

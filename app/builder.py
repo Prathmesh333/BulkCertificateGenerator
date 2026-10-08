@@ -11,13 +11,14 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from openpyxl import load_workbook
 from PIL import Image
 from pydantic import BaseModel, Field, model_validator
 
 from app.database import Item, Job, identifier, now
+from app.storage import Storage
 
 FONTS = {"Helvetica", "Helvetica-Bold", "Times-Roman", "Times-Bold", "Courier"}
 
@@ -55,6 +56,7 @@ class DesignRequest(BaseModel):
 
 
 def install_builder(app, settings):
+    storage = Storage(settings)
     static = Path(__file__).parent / "static"
     app.mount("/static", StaticFiles(directory=static), name="static")
 
@@ -66,10 +68,10 @@ def install_builder(app, settings):
         return settings.storage_dir / "uploads" / f"{value}{suffix}"
 
     async def read_upload(file):
-        data = await file.read(10 * 1024 * 1024 + 1)
+        data = await file.read(settings.upload_limit + 1)
         await file.close()
-        if len(data) > 10 * 1024 * 1024:
-            raise HTTPException(413, "Upload must be at most 10 MB.")
+        if len(data) > settings.upload_limit:
+            raise HTTPException(413, f"Upload must be at most {settings.upload_limit} bytes.")
         return data
 
     @app.post("/builder/images")
@@ -91,13 +93,16 @@ def install_builder(app, settings):
                     image.convert("RGB").save(target)
         except Exception as exc:
             raise HTTPException(422, "Upload a valid PNG or JPEG, at most 20 megapixels.") from exc
+        storage.save(target)
         return {"image_id": image_id, "width": width, "height": height,
                 "url": f"/builder/images/{image_id}"}
 
     @app.get("/builder/images/{image_id}")
     def image(image_id: UUID):
         target = location(image_id, ".png")
-        if not target.exists():
+        if storage.client:
+            return RedirectResponse(storage.url(target), status_code=303)
+        if not storage.load(target):
             raise HTTPException(404, "Image not found.")
         return FileResponse(target, media_type="image/png")
 
@@ -151,13 +156,14 @@ def install_builder(app, settings):
         target = location(sheet_id, ".json")
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps({"columns": columns, "rows": rows}), encoding="utf-8")
+        storage.save(target)
         return {"sheet_id": sheet_id, "columns": columns, "rows": rows[:10], "total": len(rows)}
 
     @app.post("/builder/jobs", status_code=202)
     def generate(payload: DesignRequest):
         image_path = location(payload.image_id, ".png")
         sheet_path = location(payload.sheet_id, ".json")
-        if not image_path.exists() or not sheet_path.exists():
+        if not storage.load(image_path) or not storage.load(sheet_path):
             raise HTTPException(404, "Upload the image and spreadsheet first.")
         sheet = json.loads(sheet_path.read_text(encoding="utf-8"))
         if payload.name_column not in sheet["columns"] or any(field.column not in sheet["columns"] for field in payload.fields):
@@ -199,6 +205,8 @@ def install_builder(app, settings):
                         item.completed_at = now()
                     session.add(item)
                 (directory / "values.json").write_text(json.dumps(values_by_id), encoding="utf-8")
+                for filename in ("background.png", "layout.json", "values.json"):
+                    storage.save(directory / filename)
                 if not accepted:
                     job.status = "failed"
                     job.completed_at = now()

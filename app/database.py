@@ -52,7 +52,10 @@ class Item(Base):
 
 def connect(settings, initialize=True):
     settings.storage_dir.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(settings.database_url)
+    url = settings.database_url
+    if url.startswith(("postgres://", "postgresql://")):
+        url = "postgresql+psycopg://" + url.split("://", 1)[1]
+    engine = create_engine(url, pool_pre_ping=True)
     if engine.dialect.name == "sqlite":
         @event.listens_for(engine, "connect")
         def configure(connection, _):

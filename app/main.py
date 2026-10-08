@@ -6,6 +6,7 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy import func, select
 from starlette.background import BackgroundTask
@@ -15,6 +16,7 @@ from app.database import Item, Job, connect, identifier, now
 from app.renderer import Renderer
 from app.schemas import Recipient, Request
 from app.builder import install_builder
+from app.storage import Storage
 
 
 def item_result(item):
@@ -29,6 +31,9 @@ def item_result(item):
 
 def create_app(settings=None):
     settings = settings or Settings.from_env()
+    if settings.serverless and (not settings.s3_bucket or not settings.database_url.startswith(("postgres",))):
+        raise ValueError("Serverless mode requires PostgreSQL and S3_BUCKET.")
+    storage = Storage(settings)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -42,6 +47,37 @@ def create_app(settings=None):
 
     app = FastAPI(title="Bulk Certificate Generator", lifespan=lifespan)
     install_builder(app, settings)
+
+    @app.get("/runtime")
+    def runtime():
+        return {"processing_mode": "serverless" if settings.serverless else "worker",
+                "max_upload_bytes": settings.upload_limit}
+
+    @app.post("/jobs/{job_id}/process")
+    def process_batch(job_id: str):
+        from hashlib import sha256
+        from sqlalchemy import text
+        from app.worker import process_next
+        if not settings.serverless:
+            raise HTTPException(409, "Use the local worker in worker mode.")
+        with app.state.sessions() as session:
+            get_job(session, job_id)
+        # A transaction lock works with pooled PostgreSQL connections and is
+        # released automatically if Vercel terminates an invocation.
+        key = int.from_bytes(sha256(job_id.encode()).digest()[:8], "big", signed=True)
+        with app.state.sessions.begin() as lock_session:
+            if not lock_session.scalar(text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": key}):
+                return {"busy": True}
+            with app.state.sessions.begin() as session:
+                for item in session.scalars(select(Item).where(Item.job_id == job_id, Item.status == "processing")):
+                    item.status = "pending" if item.attempt_count < settings.max_attempts else "failed"
+                    if item.status == "failed":
+                        item.error_stage = "processing"
+                        item.error_code = "ATTEMPTS_EXHAUSTED"
+                        item.error_message = "Processing was interrupted too many times."
+                        item.completed_at = now()
+            process_next(app.state.sessions, settings, app.state.renderer, job_id, settings.batch_size)
+        return {"busy": False}
 
     def get_job(session, job_id):
         job = session.get(Job, job_id)
@@ -123,6 +159,8 @@ def create_app(settings=None):
             if item.status != "succeeded":
                 raise HTTPException(409, "Certificate is not available.")
             path = settings.storage_dir / item.output_key
+            if storage.client:
+                return RedirectResponse(storage.url(path, f"{certificate_id}.pdf"), status_code=303)
             if not path.is_file():
                 raise HTTPException(404, "Certificate file is missing.")
             return FileResponse(path, media_type="application/pdf", filename=f"{certificate_id}.pdf")
@@ -137,6 +175,9 @@ def create_app(settings=None):
             successful = [item for item in items if item.status == "succeeded"]
             if not successful:
                 raise HTTPException(409, "No successful certificates are available.")
+            cached = settings.storage_dir / "archives" / f"{job_id}.zip"
+            if storage.client and storage.load(cached):
+                return RedirectResponse(storage.url(cached, f"{job_id}.zip"), status_code=303)
             temporary_dir = tempfile.TemporaryDirectory(prefix="certificate-download-")
             from pathlib import Path
             path = Path(temporary_dir.name) / "certificates.zip"
@@ -144,13 +185,21 @@ def create_app(settings=None):
                 with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as output:
                     for item in successful:
                         source = settings.storage_dir / item.output_key
-                        if not source.is_file():
+                        if not storage.load(source):
                             raise HTTPException(404, "A certificate file is missing.")
                         output.write(source, f"{item.certificate_id}.pdf")
                     output.writestr("manifest.json", json.dumps([item_result(item) for item in items], indent=2))
             except BaseException:
                 temporary_dir.cleanup()
                 raise
+            if storage.client:
+                persistent = settings.storage_dir / "archives" / f"{job_id}.zip"
+                persistent.parent.mkdir(parents=True, exist_ok=True)
+                import shutil
+                shutil.copyfile(path, persistent)
+                storage.save(persistent)
+                temporary_dir.cleanup()
+                return RedirectResponse(storage.url(persistent, f"{job_id}.zip"), status_code=303)
             return FileResponse(path, media_type="application/zip", filename=f"{job_id}.zip",
                                 background=BackgroundTask(temporary_dir.cleanup))
 
